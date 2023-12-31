@@ -19,6 +19,9 @@ public class Users implements Serializable {
     @Column(name = "id")
     private long id;
 
+    @Column(name = "chat_id")
+    private long chatId;
+
     @Column(name = "login")
     private String login;
 
