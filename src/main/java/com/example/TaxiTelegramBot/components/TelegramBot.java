@@ -134,7 +134,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         SendMessage messageToSend = new SendMessage();
         messageToSend.setChatId(message.getChatId());
 
-        if(!usersService.checkUserLoginOrNot(message.getChatId())){
+        if(usersService.checkUserLoginOrNot(message.getChatId())){
             messageToSend.setText("Вы уже вошли в аккаунт");
         }
         else{

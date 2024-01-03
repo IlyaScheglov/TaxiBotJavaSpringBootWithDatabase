@@ -5,7 +5,7 @@ import com.example.TaxiTelegramBot.repos.UsersRepository;
 import de.mkammerer.argon2.Argon2;
 import de.mkammerer.argon2.Argon2Factory;
 import lombok.RequiredArgsConstructor;
-import org.jvnet.hk2.annotations.Service;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
@@ -17,8 +17,8 @@ public class UsersService {
 
 
     public boolean checkUserLoginOrNot(long chatId){
-        List<Users> users = usersRepository.findByChatId(chatId);
-        return !users.isEmpty();
+        Users users = usersRepository.findByChatId(chatId);
+        return users != null;
     }
 
     public String loginUser(long chatId, String login, String password){

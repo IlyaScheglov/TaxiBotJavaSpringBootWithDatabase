@@ -9,7 +9,7 @@ import java.util.List;
 @Repository
 public interface UsersRepository extends JpaRepository<Users, Long> {
 
-    List<Users> findByChatId(long chatId);
+    Users findByChatId(long chatId);
 
     Users findByLogin(String login);
 }

@@ -4,7 +4,7 @@ import com.example.TaxiTelegramBot.entities.Cities;
 import com.example.TaxiTelegramBot.entities.Users;
 import com.example.TaxiTelegramBot.repos.CityRepository;
 import lombok.RequiredArgsConstructor;
-import org.jvnet.hk2.annotations.Service;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
