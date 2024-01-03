@@ -6,7 +6,6 @@ import de.mkammerer.argon2.Argon2;
 import de.mkammerer.argon2.Argon2Factory;
 import lombok.RequiredArgsConstructor;
 import org.jvnet.hk2.annotations.Service;
-import org.springframework.context.annotation.Bean;
 
 import java.util.List;
 
@@ -14,14 +13,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UsersService {
 
-    @Bean
-    public Argon2 argon2(){
-        return Argon2Factory.create();
-    }
-
     private final UsersRepository usersRepository;
 
-    public boolean chechUserLoginOrNot(long chatId){
+
+    public boolean checkUserLoginOrNot(long chatId){
         List<Users> users = usersRepository.findByChatId(chatId);
         return !users.isEmpty();
     }
@@ -29,14 +24,14 @@ public class UsersService {
     public String loginUser(long chatId, String login, String password){
         Users user = usersRepository.findByLogin(login);
         if(!checkCanWeAutorizeToThisLogin(login)){
-            return "Вы не можете авторизоваться по такому логину!";
+            return "Вы не можете авторизоваться по такому логину";
         }
-        else if(!argon2().verify(user.getPassword(), password)){
-            return "Введен неверный пароль!";
+        else if(!getArgon().verify(user.getPassword(), password)){
+            return "Введен неверный пароль";
         }
         else{
             user.setChatId(chatId);
-            return "Вы успешно авторизовались!";
+            return "Вы успешно авторизовались";
         }
     }
 
@@ -48,5 +43,24 @@ public class UsersService {
         else{
             return user.getChatId() == 0;
         }
+    }
+
+
+    public Users registerNewUser(Users user){
+        usersRepository.save(user);
+        return user;
+    }
+
+    public boolean checkCanWeRegisterThisUser(String login){
+        Users user = usersRepository.findByLogin(login);
+        return user == null;
+    }
+
+    public String hashPassword(String notHashedPassword){
+        return getArgon().hash(22, 65536, 1, notHashedPassword);
+    }
+
+    private Argon2 getArgon(){
+        return Argon2Factory.create();
     }
 }

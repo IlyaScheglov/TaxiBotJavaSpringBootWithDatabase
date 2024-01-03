@@ -38,11 +38,8 @@ public class Users implements Serializable {
     private List<Rides> rides = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "city_if", referencedColumnName = "id")
+    @JoinColumn(name = "city_id", referencedColumnName = "id")
     private Cities city;
-
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "user")
-    private List<UserPhotos> userPhotos = new ArrayList<>();
 
     @OneToMany(fetch = FetchType.EAGER, mappedBy = "user")
     private List<Reviews> reviews = new ArrayList<>();
