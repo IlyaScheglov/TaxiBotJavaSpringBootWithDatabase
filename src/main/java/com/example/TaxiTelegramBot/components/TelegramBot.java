@@ -2,23 +2,24 @@ package com.example.TaxiTelegramBot.components;
 
 
 import com.example.TaxiTelegramBot.entities.Cities;
-import com.example.TaxiTelegramBot.entities.TypeOfSpecialMessage;
+import com.example.TaxiTelegramBot.entities.Drivers;
+import com.example.TaxiTelegramBot.enums.TypeOfSpecialMessage;
 import com.example.TaxiTelegramBot.entities.Users;
 import com.example.TaxiTelegramBot.services.CityService;
+import com.example.TaxiTelegramBot.services.DriversService;
 import com.example.TaxiTelegramBot.services.UsersService;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -29,9 +30,13 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private Users newUserToRegister = new Users();
 
+    private Drivers newDriverToRegister = new Drivers();
+
     private final UsersService usersService;
 
     private final CityService cityService;
+
+    private final DriversService driversService;
 
     @Value("${bot.name}")
     private String botName;
@@ -71,11 +76,71 @@ public class TelegramBot extends TelegramLongPollingBot {
                         startRegistration(message);
                         break;
 
+                    case "/login_as_user":
+                        startLoginUser(message);
+                        break;
+
+                    case "/logout_as_user":
+                        logoutAsUser(message);
+                        break;
+
+                    case "/register_as_driver":
+                        startRegistrationAsDriver(message);
+                        break;
+
                     default:
                         defaultMessage(message);
                         break;
                 }
             }
+        }
+    }
+
+    private void specialMessagesHandler(Message message, TypeOfSpecialMessage type){
+        if(type.equals(TypeOfSpecialMessage.USER_REGISTER_LOGIN)){
+            userRegisterLogin(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.USER_REGISTER_PASSWORD)){
+            userRegisterPassword(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.USER_REGISTER_FIO)){
+            userRegisterFIO(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.USER_REGISTER_CITY)){
+            userRegisterCity(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.USER_AUTORIZE)){
+            userAutorize(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_LOGIN)){
+            driverRegistrationLogin(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_PASSWORD)){
+            driverRegistrationPassword(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_FIO)){
+            driverRegistrationFio(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_CITY)){
+            driverRegistrationCity(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_NUMBER)){
+            driverRegistrationAutoNumber(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_DRIVE_EXPIRIENCE)){
+            driverRegistrationDriveExpirience(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_CLASS)){
+            driverRegistrationAutoClass(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_MARK)){
+            driverRegistrationAutoMark(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_COLOR)){
+            driverRegistrationAutoColor(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_PHOTO)){
+            driverRegistrationPhoto(message);
         }
     }
 
@@ -149,22 +214,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
         catch (TelegramApiException e){
             throw new RuntimeException(e);
-        }
-    }
-
-
-    private void specialMessagesHandler(Message message, TypeOfSpecialMessage type){
-        if(type.equals(TypeOfSpecialMessage.USER_REGISTER_LOGIN)){
-            userRegisterLogin(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.USER_REGISTER_PASSWORD)){
-            userRegisterPassword(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.USER_REGISTER_FIO)){
-            userRegisterFIO(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.USER_REGISTER_CITY)){
-            userRegisterCity(message);
         }
     }
 
@@ -242,6 +291,131 @@ public class TelegramBot extends TelegramLongPollingBot {
         catch (TelegramApiException e){
             throw new RuntimeException(e);
         }
+    }
+
+    private void startLoginUser(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+
+        if(usersService.checkUserLoginOrNot(message.getChatId())){
+            messageToSend.setText("Вы уже вошли в аккаунт");
+        }
+        else{
+            messageToSend.setText("Введите логин и пароль через пробел");
+            specialMessagesMap.put(message.getChatId(),
+                    TypeOfSpecialMessage.USER_AUTORIZE);
+        }
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void userAutorize(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        String[] loginAndPAssword = message.getText().split(" ");
+        if(loginAndPAssword.length != 2){
+            messageToSend.setText("Вы ввели данные неверно");
+        }
+        else{
+            String answerFromServer = usersService
+                    .loginUser(message.getChatId(),
+                            loginAndPAssword[0], loginAndPAssword[1]);
+            messageToSend.setText(answerFromServer);
+        }
+
+        specialMessagesMap.remove(message.getChatId());
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void logoutAsUser(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        if(!usersService.checkUserLoginOrNot(message.getChatId())){
+            messageToSend.setText("Вы еще не вошли в аккаунт");
+        }
+        else{
+            usersService.logout(message.getChatId());
+            messageToSend.setText("Вы вышли из аккаунта");
+        }
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void startRegistrationAsDriver(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+
+        if(driversService.checkDriverLoginOrNot(message.getChatId())){
+            messageToSend.setText("Вы уже вошли в аккаунт водителя");
+        }
+        else{
+            messageToSend.setText("Начинаем регистрацию, введите логин");
+            specialMessagesMap.put(message.getChatId(),
+                    TypeOfSpecialMessage.DRIVER_REGISTER_LOGIN);
+            newDriverToRegister = new Drivers();
+        }
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void driverRegistrationLogin(Message message){
+
+    }
+
+    private void driverRegistrationPassword(Message message){
+
+    }
+
+    private void driverRegistrationFio(Message message){
+
+    }
+
+    private void driverRegistrationCity(Message message){
+
+    }
+
+    private void driverRegistrationAutoNumber(Message message){
+
+    }
+
+    private void driverRegistrationDriveExpirience(Message message){
+
+    }
+
+    private void driverRegistrationAutoClass(Message message){
+
+    }
+
+    private void driverRegistrationAutoMark(Message message){
+
+    }
+
+    private void driverRegistrationAutoColor(Message message){
+
+    }
+
+    private void driverRegistrationPhoto(Message message){
+
     }
 
 }

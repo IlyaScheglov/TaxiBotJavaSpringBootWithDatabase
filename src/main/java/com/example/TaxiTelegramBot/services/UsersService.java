@@ -17,8 +17,8 @@ public class UsersService {
 
 
     public boolean checkUserLoginOrNot(long chatId){
-        Users users = usersRepository.findByChatId(chatId);
-        return users != null;
+        Users user = findUserByChatId(chatId);
+        return user != null;
     }
 
     public String loginUser(long chatId, String login, String password){
@@ -31,6 +31,7 @@ public class UsersService {
         }
         else{
             user.setChatId(chatId);
+            usersRepository.save(user);
             return "Вы успешно авторизовались";
         }
     }
@@ -56,11 +57,21 @@ public class UsersService {
         return user == null;
     }
 
+    public void logout(long chatId){
+        Users user = findUserByChatId(chatId);
+        user.setChatId(0);
+        usersRepository.save(user);
+    }
+
     public String hashPassword(String notHashedPassword){
         return getArgon().hash(22, 65536, 1, notHashedPassword);
     }
 
     private Argon2 getArgon(){
         return Argon2Factory.create();
+    }
+
+    private Users findUserByChatId(long chatId){
+        return usersRepository.findByChatId(chatId);
     }
 }
