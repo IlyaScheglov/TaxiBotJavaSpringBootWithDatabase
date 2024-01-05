@@ -379,27 +379,119 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void driverRegistrationLogin(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        String login = message.getText();
+        if(driversService.checkCanWeRegisterToThisLogin(login)){
+            messageToSend.setText("Введите пароль");
+            specialMessagesMap.put(message.getChatId(),
+                    TypeOfSpecialMessage.DRIVER_REGISTER_PASSWORD);
+            newDriverToRegister.setLogin(login);
+        }
+        else{
+            messageToSend.setText("Водитель с таким логином уже существует, попробуйте другой");
+        }
 
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
     }
 
     private void driverRegistrationPassword(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        messageToSend.setText("Введите ФИО");
+        String password = driversService.hashPassword(message.getText());
+        specialMessagesMap.put(message.getChatId(),
+                TypeOfSpecialMessage.DRIVER_REGISTER_FIO);
+        newDriverToRegister.setPassword(password);
 
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
     }
 
     private void driverRegistrationFio(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        messageToSend.setText("Введите название своего города");
+        specialMessagesMap.put(message.getChatId(),
+                TypeOfSpecialMessage.DRIVER_REGISTER_CITY);
+        newDriverToRegister.setFio(message.getText());
 
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
     }
 
     private void driverRegistrationCity(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        Cities city = cityService.addCityIfItExists(message.getText().toUpperCase());
+        messageToSend.setText("Введите номер автомобиля в формате: А111АА12");
+        specialMessagesMap.put(message.getChatId(),
+                TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_NUMBER);
+        newDriverToRegister.setCity(city);
 
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
     }
 
     private void driverRegistrationAutoNumber(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        String number = message.getText().toUpperCase();
+        if(!driversService.checkValidNumberOrNot(number)){
+            messageToSend.setText("Вы ввели номер в неверном формате, посмотрите на сообщение выше");
+        }
+        else{
+            messageToSend.setText("Введите сколько лет вы водите автомобиль");
+            specialMessagesMap.put(message.getChatId(),
+                    TypeOfSpecialMessage.DRIVER_REGISTER_DRIVE_EXPIRIENCE);
+            newDriverToRegister.setAutoNumber(number);
+        }
 
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
     }
 
     private void driverRegistrationDriveExpirience(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        String expirience = message.getText();
+        if(!driversService.tryParseInt(expirience)){
+            messageToSend.setText("Укажите целое число");
+        }
+        else{
+            messageToSend.setText("Выбирите класс автомобиля");
+            specialMessagesMap.put(message.getChatId(),
+                    TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_CLASS);
+            newDriverToRegister.setDriveExpirience(Integer.parseInt(expirience));
+        }
 
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
     }
 
     private void driverRegistrationAutoClass(Message message){

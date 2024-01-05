@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 public interface DriversRepository extends JpaRepository<Drivers, Long> {
 
     Drivers findByChatId(long chatId);
+
+    Drivers findByLogin(String login);
 }
