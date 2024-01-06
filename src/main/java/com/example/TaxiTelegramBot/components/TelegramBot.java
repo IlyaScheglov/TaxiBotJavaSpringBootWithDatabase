@@ -1,30 +1,31 @@
 package com.example.TaxiTelegramBot.components;
 
 
-import com.example.TaxiTelegramBot.entities.Cities;
-import com.example.TaxiTelegramBot.entities.Drivers;
+import com.example.TaxiTelegramBot.entities.*;
 import com.example.TaxiTelegramBot.enums.TypeOfSpecialMessage;
-import com.example.TaxiTelegramBot.entities.Users;
-import com.example.TaxiTelegramBot.services.CityService;
-import com.example.TaxiTelegramBot.services.DriversService;
-import com.example.TaxiTelegramBot.services.UsersService;
+import com.example.TaxiTelegramBot.services.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.File;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
+
+    @Value("${photo.path}")
+    private static String photoPath;
 
     private Map<Long, TypeOfSpecialMessage> specialMessagesMap = new HashMap<>();
 
@@ -37,6 +38,12 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final CityService cityService;
 
     private final DriversService driversService;
+
+    private final AutoClassesService autoClassesService;
+
+    private final MarksService marksService;
+
+    private final ColorsService colorsService;
 
     @Value("${bot.name}")
     private String botName;
@@ -480,7 +487,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             messageToSend.setText("Укажите целое число");
         }
         else{
-            messageToSend.setText("Выбирите класс автомобиля");
+            messageToSend.setText("Выберите класс автомобиля");
+            messageToSend.setReplyMarkup(makeMarkupForAutoClass());
             specialMessagesMap.put(message.getChatId(),
                     TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_CLASS);
             newDriverToRegister.setDriveExpirience(Integer.parseInt(expirience));
@@ -495,19 +503,107 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void driverRegistrationAutoClass(Message message){
+        List<String> allClasses = autoClassesService.findAllClassesTitle();
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        String classChosen = message.getText();
+        if(!allClasses.contains(classChosen)){
+            messageToSend.setText("Выберите класс автомобиля из списка");
+            messageToSend.setReplyMarkup(makeMarkupForAutoClass());
+        }
+        else{
+            messageToSend.setText("Введите марку своего автомобиля");
+            specialMessagesMap.put(message.getChatId(),
+                    TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_MARK);
+            newDriverToRegister.setAutoClass(autoClassesService
+                    .getAutoClassByTitle(classChosen));
+        }
 
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
     }
 
     private void driverRegistrationAutoMark(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        String markTitle = message.getText().toUpperCase();
+        Marks mark = marksService.getAndAddIfExcists(markTitle);
+        messageToSend.setText("Введите цвет своего автомобиля");
+        specialMessagesMap.put(message.getChatId(),
+                TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_COLOR);
+        newDriverToRegister.setMark(mark);
 
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
     }
 
     private void driverRegistrationAutoColor(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        String colorTitle = message.getText().toUpperCase();
+        Colors color = colorsService.getAndAddIfExcists(colorTitle);
+        messageToSend.setText("Отправьте фото своего лица");
+        specialMessagesMap.put(message.getChatId(),
+                TypeOfSpecialMessage.DRIVER_REGISTER_PHOTO);
+        newDriverToRegister.setColor(color);
 
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
     }
 
     private void driverRegistrationPhoto(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        if(!message.hasPhoto()){
+            messageToSend.setText("Вы не отправили фото, попробуйте еще раз");
+        }
+        else{
+            try {
+                PhotoSize photo = message.getPhoto().get(0);
+                String uuidForFile = UUID.randomUUID().toString();
+                String fileName = photoPath + "/" + uuidForFile + "-" +
+                        photo.getFileUniqueId();
+                GetFile getFile = new GetFile(photo.getFileId());
+                File file = execute(getFile);
+                downloadFile(file, new java.io.File(fileName));
+                messageToSend.setText("Вы успешно зарегестрировались");
+                driversService.finishRegistration(newDriverToRegister, fileName);
+                newDriverToRegister = new Drivers();
+                specialMessagesMap.remove(message.getChatId());
+            }
+            catch (TelegramApiException e){
+                e.printStackTrace();
+            }
+        }
+        try {
+            execute(messageToSend);
+        }
+        catch (TelegramApiException er){
+            er.printStackTrace();
+        }
+    }
 
+    private ReplyKeyboardMarkup makeMarkupForAutoClass(){
+        List<String> allClasses = autoClassesService.findAllClassesTitle();
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        KeyboardRow keyboardRow = new KeyboardRow();
+        allClasses.forEach(ac -> keyboardRow.add(ac));
+        keyboardRows.add(keyboardRow);
+        replyKeyboardMarkup.setKeyboard(keyboardRows);
+        return replyKeyboardMarkup;
     }
 
 }

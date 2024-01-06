@@ -1,5 +1,6 @@
 package com.example.TaxiTelegramBot.services;
 
+import com.example.TaxiTelegramBot.entities.DriverPhotos;
 import com.example.TaxiTelegramBot.entities.Drivers;
 import com.example.TaxiTelegramBot.repos.DriversRepository;
 import de.mkammerer.argon2.Argon2;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +30,8 @@ public class DriversService {
     "87", "88", "89", "90", "95", "98", "99"};
 
     private final DriversRepository driversRepository;
+
+    private final DriverPhotosService driverPhotosService;
 
     public boolean checkDriverLoginOrNot(long chatId){
         Drivers driver = getDriverByChatId(chatId);
@@ -89,5 +93,13 @@ public class DriversService {
             return false;
         }
         return true;
+    }
+
+    public void finishRegistration(Drivers driver, String wayToPhoto){
+        DriverPhotos photo = driverPhotosService.addNewPhoto(wayToPhoto);
+        List<DriverPhotos> photosList = new ArrayList<>();
+        photosList.add(photo);
+        driver.setDriverPhotos(photosList);
+        driversRepository.save(driver);
     }
 }
