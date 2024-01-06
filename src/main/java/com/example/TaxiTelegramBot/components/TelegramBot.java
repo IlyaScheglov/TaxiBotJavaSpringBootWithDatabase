@@ -62,6 +62,11 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
     @Override
     public void onUpdateReceived(Update update) {
+        if(update.getMessage().hasPhoto() && specialMessagesMap
+                .containsKey(update.getMessage().getChatId())){
+            specialMessagesHandler(update.getMessage(),
+                    specialMessagesMap.get(update.getMessage().getChatId()));
+        }
         if(update.hasMessage() && update.getMessage().hasText()){
             if(specialMessagesMap.containsKey(update.getMessage().getChatId())){
                 specialMessagesHandler(update.getMessage(),
@@ -93,6 +98,14 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                     case "/register_as_driver":
                         startRegistrationAsDriver(message);
+                        break;
+
+                    case "/login_as_driver":
+                        startLoginAsDriver(message);
+                        break;
+
+                    case "/logout_as_driver":
+                        logoutAsDriver(message);
                         break;
 
                     default:
@@ -148,6 +161,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
         else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_PHOTO)){
             driverRegistrationPhoto(message);
+        }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_AUTORIZE)){
+            driverAutorize(message);
         }
     }
 
@@ -324,14 +340,14 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void userAutorize(Message message){
         SendMessage messageToSend = new SendMessage();
         messageToSend.setChatId(message.getChatId());
-        String[] loginAndPAssword = message.getText().split(" ");
-        if(loginAndPAssword.length != 2){
+        String[] loginAndPassword = message.getText().split(" ");
+        if(loginAndPassword.length != 2){
             messageToSend.setText("Вы ввели данные неверно");
         }
         else{
             String answerFromServer = usersService
                     .loginUser(message.getChatId(),
-                            loginAndPAssword[0], loginAndPAssword[1]);
+                            loginAndPassword[0], loginAndPassword[1]);
             messageToSend.setText(answerFromServer);
         }
 
@@ -579,6 +595,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 File file = execute(getFile);
                 downloadFile(file, new java.io.File(fileName));
                 messageToSend.setText("Вы успешно зарегестрировались");
+                newDriverToRegister.setChatId(message.getChatId());
                 driversService.finishRegistration(newDriverToRegister, fileName);
                 newDriverToRegister = new Drivers();
                 specialMessagesMap.remove(message.getChatId());
@@ -604,6 +621,60 @@ public class TelegramBot extends TelegramLongPollingBot {
         keyboardRows.add(keyboardRow);
         replyKeyboardMarkup.setKeyboard(keyboardRows);
         return replyKeyboardMarkup;
+    }
+
+    private void startLoginAsDriver(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        if(driversService.checkDriverLoginOrNot(message.getChatId())){
+            messageToSend.setText("Вы уже вошли в аккаунт водителя");
+        }
+        else{
+            messageToSend.setText("Введите логин и пароль через пробел");
+            specialMessagesMap.put(message.getChatId(),
+                    TypeOfSpecialMessage.DRIVER_AUTORIZE);
+        }
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void driverAutorize(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        messageToSend.setText(driversService.loginDriver(message.getText(),
+                message.getChatId()));
+        specialMessagesMap.remove(message.getChatId());
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void logoutAsDriver(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        if(!driversService.checkDriverLoginOrNot(message.getChatId())){
+            messageToSend.setText("Вы еще не вошли в аккаунт водителя");
+        }
+        else{
+            driversService.logoutDriver(message.getChatId());
+            messageToSend.setText("Вы вышли из аккаунта водителя");
+        }
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
     }
 
 }

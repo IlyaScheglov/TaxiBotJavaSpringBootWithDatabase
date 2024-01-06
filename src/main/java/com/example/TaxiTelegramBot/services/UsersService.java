@@ -48,6 +48,7 @@ public class UsersService {
 
 
     public Users registerNewUser(Users user){
+        user.setMoney("0.00");
         usersRepository.save(user);
         return user;
     }

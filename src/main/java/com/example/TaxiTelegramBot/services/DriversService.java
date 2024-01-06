@@ -59,8 +59,8 @@ public class DriversService {
         if((number.length() < 8) || (number.length() > 9)){
             return false;
         }
-        else if(!(russianLettersInAutoNumber.contains(number.substring(0, 1)) &&
-                russianLettersInAutoNumber.contains(number.substring(4, 6)))){
+        else if(!(isItRusChar(number.charAt(0)) && isItRusChar(number.charAt(4)) &&
+        isItRusChar(number.charAt(5)))){
             return false;
         }
         else if(!StringUtils.isNumeric(number.substring(1, 4))){
@@ -85,6 +85,10 @@ public class DriversService {
         return result;
     }
 
+    private boolean isItRusChar(char c){
+        return russianLettersInAutoNumber.indexOf(c) != -1;
+    }
+
     public boolean tryParseInt(String str){
         try {
             Integer.parseInt(str);
@@ -100,6 +104,37 @@ public class DriversService {
         List<DriverPhotos> photosList = new ArrayList<>();
         photosList.add(photo);
         driver.setDriverPhotos(photosList);
+        driver.setMoney("0.00");
+        driversRepository.save(driver);
+    }
+
+    public String loginDriver(String loginAndPassword, long chatId){
+        String[] logAndPass = loginAndPassword.split(" ");
+        if(logAndPass.length != 2){
+            return "Вы ввели данные неверно";
+        }
+        String login = logAndPass[0];
+        String password = logAndPass[1];
+        Drivers driver = driversRepository.findByLogin(login);
+        if(driver == null){
+            return "Водителя с таким логином не существует";
+        }
+        else if(driver.getChatId() != 0L){
+            return "В этот аккаунт уже кто-то вошел";
+        }
+        else if(!getArgon().verify(driver.getPassword(), password)){
+            return "Пароль введен неверно";
+        }
+        else{
+            driver.setChatId(chatId);
+            driversRepository.save(driver);
+            return "Вы вошли в аккаунт водителя";
+        }
+    }
+
+    public void logoutDriver(long chatId){
+        Drivers driver = getDriverByChatId(chatId);
+        driver.setChatId(0L);
         driversRepository.save(driver);
     }
 }

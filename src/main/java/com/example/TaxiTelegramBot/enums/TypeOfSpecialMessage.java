@@ -26,5 +26,7 @@ public enum TypeOfSpecialMessage {
 
     DRIVER_REGISTER_AUTO_COLOR,
 
-    DRIVER_REGISTER_PHOTO;
+    DRIVER_REGISTER_PHOTO,
+
+    DRIVER_AUTORIZE;
 }
