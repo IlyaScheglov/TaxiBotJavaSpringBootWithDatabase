@@ -1,6 +1,7 @@
 package com.example.TaxiTelegramBot.components;
 
 
+import com.example.TaxiTelegramBot.config.PhotoPathConfig;
 import com.example.TaxiTelegramBot.entities.*;
 import com.example.TaxiTelegramBot.enums.TypeOfSpecialMessage;
 import com.example.TaxiTelegramBot.services.*;
@@ -24,14 +25,13 @@ import java.util.*;
 @RequiredArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
 
-    @Value("${photo.path}")
-    private static String photoPath;
+    private final PhotoPathConfig photoPathConfig;
 
     private Map<Long, TypeOfSpecialMessage> specialMessagesMap = new HashMap<>();
 
-    private Users newUserToRegister = new Users();
+    private Map<Long, Users> newUsersMap = new HashMap<>();
 
-    private Drivers newDriverToRegister = new Drivers();
+    private Map<Long, Drivers> newDriversMap = new HashMap<>();
 
     private final UsersService usersService;
 
@@ -229,7 +229,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             messageToSend.setText("Начинаем регистрацию, введите логин");
             specialMessagesMap.put(message.getChatId(),
                     TypeOfSpecialMessage.USER_REGISTER_LOGIN);
-            newUserToRegister = new Users();
+            newUsersMap.put(message.getChatId(), new Users());
         }
 
         try{
@@ -248,7 +248,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             messageToSend.setText("Введите пароль");
             specialMessagesMap.put(message.getChatId(),
                     TypeOfSpecialMessage.USER_REGISTER_PASSWORD);
-            newUserToRegister.setLogin(login);
+            Users user = newUsersMap.get(message.getChatId());
+            user.setLogin(login);
+            newUsersMap.put(message.getChatId(), user);
         }
         else{
             messageToSend.setText("Пользователь с таким логином уже существует, попробуйте другой");
@@ -269,7 +271,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         messageToSend.setText("Введите ФИО");
         specialMessagesMap.put(message.getChatId(),
                 TypeOfSpecialMessage.USER_REGISTER_FIO);
-        newUserToRegister.setPassword(usersService.hashPassword(password));
+        Users user = newUsersMap.get(message.getChatId());
+        user.setPassword(usersService.hashPassword(password));
+        newUsersMap.put(message.getChatId(), user);
 
         try{
             execute(messageToSend);
@@ -286,7 +290,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         messageToSend.setText("Введите название своего города");
         specialMessagesMap.put(message.getChatId(),
                 TypeOfSpecialMessage.USER_REGISTER_CITY);
-        newUserToRegister.setFio(fio);
+        Users user = newUsersMap.get(message.getChatId());
+        user.setFio(fio);
+        newUsersMap.put(message.getChatId(), user);
 
         try{
             execute(messageToSend);
@@ -303,11 +309,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         messageToSend.setText("Вы успешно зарегестрировались");
         specialMessagesMap.remove(message.getChatId());
         Cities realCity = cityService.addCityIfItExists(city);
-        newUserToRegister.setCity(realCity);
-        newUserToRegister.setChatId(message.getChatId());
-        Users user = usersService.registerNewUser(newUserToRegister);
-        cityService.addUserToCity(user, user.getCity());
-
+        Users user = newUsersMap.get(message.getChatId());
+        user.setCity(realCity);
+        user.setChatId(message.getChatId());
+        Users newUser = usersService.registerNewUser(user);
+        cityService.addUserToCity(newUser, user.getCity());
+        newUsersMap.remove(message.getChatId());
         try{
             execute(messageToSend);
         }
@@ -390,7 +397,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             messageToSend.setText("Начинаем регистрацию, введите логин");
             specialMessagesMap.put(message.getChatId(),
                     TypeOfSpecialMessage.DRIVER_REGISTER_LOGIN);
-            newDriverToRegister = new Drivers();
+            newDriversMap.put(message.getChatId(), new Drivers());
         }
 
         try{
@@ -409,7 +416,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             messageToSend.setText("Введите пароль");
             specialMessagesMap.put(message.getChatId(),
                     TypeOfSpecialMessage.DRIVER_REGISTER_PASSWORD);
-            newDriverToRegister.setLogin(login);
+            Drivers driver = newDriversMap.get(message.getChatId());
+            driver.setLogin(login);
+            newDriversMap.put(message.getChatId(), driver);
         }
         else{
             messageToSend.setText("Водитель с таким логином уже существует, попробуйте другой");
@@ -430,7 +439,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         String password = driversService.hashPassword(message.getText());
         specialMessagesMap.put(message.getChatId(),
                 TypeOfSpecialMessage.DRIVER_REGISTER_FIO);
-        newDriverToRegister.setPassword(password);
+        Drivers driver = newDriversMap.get(message.getChatId());
+        driver.setPassword(password);
+        newDriversMap.put(message.getChatId(), driver);
 
         try{
             execute(messageToSend);
@@ -446,7 +457,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         messageToSend.setText("Введите название своего города");
         specialMessagesMap.put(message.getChatId(),
                 TypeOfSpecialMessage.DRIVER_REGISTER_CITY);
-        newDriverToRegister.setFio(message.getText());
+        Drivers driver = newDriversMap.get(message.getChatId());
+        driver.setFio(message.getText());
+        newDriversMap.put(message.getChatId(), driver);
 
         try{
             execute(messageToSend);
@@ -463,8 +476,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         messageToSend.setText("Введите номер автомобиля в формате: А111АА12");
         specialMessagesMap.put(message.getChatId(),
                 TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_NUMBER);
-        newDriverToRegister.setCity(city);
-
+        Drivers driver = newDriversMap.get(message.getChatId());
+        driver.setCity(city);
+        newDriversMap.put(message.getChatId(), driver);
+        cityService.addDriverToCity(driver, city);
         try{
             execute(messageToSend);
         }
@@ -484,7 +499,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             messageToSend.setText("Введите сколько лет вы водите автомобиль");
             specialMessagesMap.put(message.getChatId(),
                     TypeOfSpecialMessage.DRIVER_REGISTER_DRIVE_EXPIRIENCE);
-            newDriverToRegister.setAutoNumber(number);
+            Drivers driver = newDriversMap.get(message.getChatId());
+            driver.setAutoNumber(number);
+            newDriversMap.put(message.getChatId(), driver);
         }
 
         try{
@@ -507,7 +524,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             messageToSend.setReplyMarkup(makeMarkupForAutoClass());
             specialMessagesMap.put(message.getChatId(),
                     TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_CLASS);
-            newDriverToRegister.setDriveExpirience(Integer.parseInt(expirience));
+            Drivers driver = newDriversMap.get(message.getChatId());
+            driver.setDriveExpirience(Integer.parseInt(expirience));
+            newDriversMap.put(message.getChatId(), driver);
         }
 
         try{
@@ -531,8 +550,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             messageToSend.setText("Введите марку своего автомобиля");
             specialMessagesMap.put(message.getChatId(),
                     TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_MARK);
-            newDriverToRegister.setAutoClass(autoClassesService
-                    .getAutoClassByTitle(classChosen));
+            Drivers driver = newDriversMap.get(message.getChatId());
+            driver.setAutoClass(autoClassesService.getAutoClassByTitle(classChosen));
+            newDriversMap.put(message.getChatId(), driver);
         }
 
         try{
@@ -551,7 +571,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         messageToSend.setText("Введите цвет своего автомобиля");
         specialMessagesMap.put(message.getChatId(),
                 TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_COLOR);
-        newDriverToRegister.setMark(mark);
+        Drivers driver = newDriversMap.get(message.getChatId());
+        driver.setMark(mark);
+        newDriversMap.put(message.getChatId(), driver);
 
         try{
             execute(messageToSend);
@@ -569,7 +591,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         messageToSend.setText("Отправьте фото своего лица");
         specialMessagesMap.put(message.getChatId(),
                 TypeOfSpecialMessage.DRIVER_REGISTER_PHOTO);
-        newDriverToRegister.setColor(color);
+        Drivers driver = newDriversMap.get(message.getChatId());
+        driver.setColor(color);
+        newDriversMap.put(message.getChatId(), driver);
 
         try{
             execute(messageToSend);
@@ -589,15 +613,16 @@ public class TelegramBot extends TelegramLongPollingBot {
             try {
                 PhotoSize photo = message.getPhoto().get(0);
                 String uuidForFile = UUID.randomUUID().toString();
-                String fileName = photoPath + "/" + uuidForFile + "-" +
-                        photo.getFileUniqueId();
+                String fileName = photoPathConfig.getPhotoPath() + "/" + uuidForFile + "-" +
+                        photo.getFileUniqueId() + ".jpg";
                 GetFile getFile = new GetFile(photo.getFileId());
                 File file = execute(getFile);
                 downloadFile(file, new java.io.File(fileName));
                 messageToSend.setText("Вы успешно зарегестрировались");
-                newDriverToRegister.setChatId(message.getChatId());
-                driversService.finishRegistration(newDriverToRegister, fileName);
-                newDriverToRegister = new Drivers();
+                Drivers driver = newDriversMap.get(message.getChatId());
+                driver.setChatId(message.getChatId());
+                driversService.finishRegistration(driver, fileName);
+                newDriversMap.remove(message.getChatId());
                 specialMessagesMap.remove(message.getChatId());
             }
             catch (TelegramApiException e){

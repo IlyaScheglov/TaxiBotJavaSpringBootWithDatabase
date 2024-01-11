@@ -1,6 +1,7 @@
 package com.example.TaxiTelegramBot.services;
 
 import com.example.TaxiTelegramBot.entities.Cities;
+import com.example.TaxiTelegramBot.entities.Drivers;
 import com.example.TaxiTelegramBot.entities.Users;
 import com.example.TaxiTelegramBot.repos.CityRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,13 @@ public class CityService {
         List<Users> users = city.getUsers();
         users.add(user);
         city.setUsers(users);
+        cityRepository.save(city);
+    }
+
+    public void addDriverToCity(Drivers driver, Cities city){
+        List<Drivers> drivers = new ArrayList<>();
+        drivers.add(driver);
+        city.setDrivers(drivers);
         cityRepository.save(city);
     }
 }
