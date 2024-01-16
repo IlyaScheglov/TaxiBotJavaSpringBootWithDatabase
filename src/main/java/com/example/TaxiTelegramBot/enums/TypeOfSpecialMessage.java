@@ -28,5 +28,7 @@ public enum TypeOfSpecialMessage {
 
     DRIVER_REGISTER_PHOTO,
 
-    DRIVER_AUTORIZE;
+    DRIVER_AUTORIZE,
+
+    DRIVER_GET_MONEY;
 }

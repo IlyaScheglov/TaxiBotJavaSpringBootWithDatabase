@@ -11,11 +11,14 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.File;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -62,56 +65,88 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
     @Override
     public void onUpdateReceived(Update update) {
-        if(update.getMessage().hasPhoto() && specialMessagesMap
-                .containsKey(update.getMessage().getChatId())){
-            specialMessagesHandler(update.getMessage(),
-                    specialMessagesMap.get(update.getMessage().getChatId()));
-        }
-        if(update.hasMessage() && update.getMessage().hasText()){
-            if(specialMessagesMap.containsKey(update.getMessage().getChatId())){
+        if(update.hasMessage()){
+            if(update.getMessage().hasPhoto() && specialMessagesMap
+                    .containsKey(update.getMessage().getChatId())){
                 specialMessagesHandler(update.getMessage(),
                         specialMessagesMap.get(update.getMessage().getChatId()));
             }
-            else {
-                Message message = update.getMessage();
-                String text = message.getText();
-                switch (text) {
-                    case "/start":
-                        startMessage(message);
-                        break;
-
-                    case "/help":
-                        helpMessage(message);
-                        break;
-
-                    case "/register_as_user":
-                        startRegistration(message);
-                        break;
-
-                    case "/login_as_user":
-                        startLoginUser(message);
-                        break;
-
-                    case "/logout_as_user":
-                        logoutAsUser(message);
-                        break;
-
-                    case "/register_as_driver":
-                        startRegistrationAsDriver(message);
-                        break;
-
-                    case "/login_as_driver":
-                        startLoginAsDriver(message);
-                        break;
-
-                    case "/logout_as_driver":
-                        logoutAsDriver(message);
-                        break;
-
-                    default:
-                        defaultMessage(message);
-                        break;
+            else if(update.getMessage().hasText()){
+                if(specialMessagesMap.containsKey(update.getMessage().getChatId())){
+                    specialMessagesHandler(update.getMessage(),
+                            specialMessagesMap.get(update.getMessage().getChatId()));
                 }
+                else {
+                    Message message = update.getMessage();
+                    String text = message.getText();
+                    switch (text) {
+                        case "/start":
+                            startMessage(message);
+                            break;
+
+                        case "/help":
+                            helpMessage(message);
+                            break;
+
+                        case "/register_as_user":
+                            startRegistration(message);
+                            break;
+
+                        case "/login_as_user":
+                            startLoginUser(message);
+                            break;
+
+                        case "/logout_as_user":
+                            logoutAsUser(message);
+                            break;
+
+                        case "/register_as_driver":
+                            startRegistrationAsDriver(message);
+                            break;
+
+                        case "/login_as_driver":
+                            startLoginAsDriver(message);
+                            break;
+
+                        case "/logout_as_driver":
+                            logoutAsDriver(message);
+                            break;
+
+                        case "/user_money":
+                            userMoney(message);
+                            break;
+
+                        case "/driver_money":
+                            driverMoney(message);
+                            break;
+
+                        default:
+                            defaultMessage(message);
+                            break;
+                    }
+                }
+            }
+        }
+        else if(update.hasCallbackQuery()){
+            String callback = update.getCallbackQuery().getData();
+            long chatId = update.getCallbackQuery().getMessage().getChatId();
+            long messageId = update.getCallbackQuery().getMessage().getMessageId();
+            switch (callback){
+                case "ADD_MONEY_USER":
+                    addUserMoney(chatId, messageId);
+                    break;
+
+                case "HIDE_MONEY":
+                    hideMoney(chatId, messageId);
+                    break;
+
+                case "GET_MONEY_DRIVER":
+                    getDriverMoney(chatId, messageId);
+                    break;
+
+                default:
+                    break;
+
             }
         }
     }
@@ -165,6 +200,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         else if(type.equals(TypeOfSpecialMessage.DRIVER_AUTORIZE)){
             driverAutorize(message);
         }
+        else if(type.equals(TypeOfSpecialMessage.DRIVER_GET_MONEY)){
+            driverHowMuchMoneyToGet(message);
+        }
     }
 
     private void startMessage(Message message){
@@ -191,6 +229,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                 /logout_as_driver - команда для выхода из аккаунта водителя
                 /register_as_user - команда для регистрации нового пользователя
                 /register_as_driver - команда для регистрации нового водителя
+                /user_money
+                /driver_money
                 """;
 
         SendMessage messageToSend = new SendMessage();
@@ -700,6 +740,144 @@ public class TelegramBot extends TelegramLongPollingBot {
         catch (TelegramApiException e){
             throw new RuntimeException(e);
         }
+    }
+
+    private void userMoney(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        if(!usersService.checkUserLoginOrNot(message.getChatId())){
+            messageToSend.setText("Вы еще не залогинились как пользователь");
+        }
+        else{
+            String userMoney = usersService.getUserMoney(message.getChatId());
+            messageToSend.setText("Ваш баланс: " + userMoney + "₽");
+            messageToSend.setReplyMarkup(makeMarkupForUserMoney());
+        }
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void driverMoney(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        if(!driversService.checkDriverLoginOrNot(message.getChatId())){
+            messageToSend.setText("Вы еще не залогинились как водитель");
+        }
+        else{
+            String driverMoney = driversService.getDriverMoney(message.getChatId());
+            messageToSend.setText("Ваш баланс: " + driverMoney + "₽");
+            messageToSend.setReplyMarkup(makeMarkupForDriverMoney());
+        }
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void addUserMoney(long chatId, long messageId){
+        EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setChatId(chatId);
+        editMessageText.setMessageId((int) messageId);
+        usersService.addMoneyToBalance(chatId, "100");
+        editMessageText.setText("Здесь должно быть апи, но его нет, вам начислили 100.00₽");
+
+        try{
+            execute(editMessageText);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void hideMoney(long chatId, long messageId){
+        EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setChatId(chatId);
+        editMessageText.setMessageId((int) messageId);
+        editMessageText.setText("Баланс скрыт");
+
+        try{
+            execute(editMessageText);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void getDriverMoney(long chatId, long messageId) {
+        EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setChatId(chatId);
+        editMessageText.setMessageId((int) messageId);
+        editMessageText.setText("Введите сколько денег вы хотите вывести");
+        specialMessagesMap.put(chatId, TypeOfSpecialMessage.DRIVER_GET_MONEY);
+
+        try{
+            execute(editMessageText);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void driverHowMuchMoneyToGet(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        messageToSend.setText(driversService.getMoneyFromDriverBalance(message.getChatId(),
+                message.getText()));
+        specialMessagesMap.remove(message.getChatId());
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    private InlineKeyboardMarkup makeMarkupForUserMoney(){
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInlineButtons = new ArrayList<>();
+        List<InlineKeyboardButton> buttonsInRow = new ArrayList<>();
+
+        InlineKeyboardButton firstButton =
+                new InlineKeyboardButton("Добавить денег на баланс");
+        firstButton.setCallbackData("ADD_MONEY_USER");
+        InlineKeyboardButton secondButton =
+                new InlineKeyboardButton("Скрыть баланс");
+        secondButton.setCallbackData("HIDE_MONEY");
+
+        buttonsInRow.add(firstButton);
+        buttonsInRow.add(secondButton);
+        rowsInlineButtons.add(buttonsInRow);
+        inlineKeyboardMarkup.setKeyboard(rowsInlineButtons);
+        return inlineKeyboardMarkup;
+    }
+
+    private InlineKeyboardMarkup makeMarkupForDriverMoney(){
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInlineButtons = new ArrayList<>();
+        List<InlineKeyboardButton> buttonsInRow = new ArrayList<>();
+
+        InlineKeyboardButton firstButton =
+                new InlineKeyboardButton("Вывести деньги с баланса");
+        firstButton.setCallbackData("GET_MONEY_DRIVER");
+        InlineKeyboardButton secondButton =
+                new InlineKeyboardButton("Скрыть баланс");
+        secondButton.setCallbackData("HIDE_MONEY");
+
+        buttonsInRow.add(firstButton);
+        buttonsInRow.add(secondButton);
+        rowsInlineButtons.add(buttonsInRow);
+        inlineKeyboardMarkup.setKeyboard(rowsInlineButtons);
+        return inlineKeyboardMarkup;
     }
 
 }

@@ -5,8 +5,10 @@ import com.example.TaxiTelegramBot.repos.UsersRepository;
 import de.mkammerer.argon2.Argon2;
 import de.mkammerer.argon2.Argon2Factory;
 import lombok.RequiredArgsConstructor;
+import org.glassfish.jersey.server.monitoring.ExceptionMapperStatistics;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -46,6 +48,24 @@ public class UsersService {
         }
     }
 
+    public String getUserMoney(long chatId){
+        Users user = findUserByChatId(chatId);
+        return user.getMoney();
+    }
+
+    public String addMoneyToBalance(long chatId, String howMuch) {
+        Users user = findUserByChatId(chatId);
+        BigDecimal userMoney = new BigDecimal(user.getMoney());
+        BigDecimal addingMoney = null;
+        try {
+            addingMoney = new BigDecimal(howMuch);
+        } catch (Exception e) {
+            return "Вы ввели что-то неверно";
+        }
+        user.setMoney(String.valueOf(userMoney.add(addingMoney)));
+        usersRepository.save(user);
+        return "Вы успешно пополнили баланс";
+    }
 
     public Users registerNewUser(Users user){
         user.setMoney("0.00");

@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
 @Service
 @RequiredArgsConstructor
 public class DriversService {
@@ -76,6 +78,28 @@ public class DriversService {
         }
 
         return result;
+    }
+
+    public String getDriverMoney(long chatId){
+        Drivers driver = getDriverByChatId(chatId);
+        return driver.getMoney();
+    }
+
+    public String getMoneyFromDriverBalance(long chatId, String howMuch){
+        Drivers driver = getDriverByChatId(chatId);
+        BigDecimal driverMoney = new BigDecimal(driver.getMoney());
+        try {
+            BigDecimal moneyToGet = new BigDecimal(howMuch);
+            if(moneyToGet.compareTo(driverMoney) == 1){
+                return "у вас нет столько денег на балансе";
+            }
+            driver.setMoney(String.valueOf(driverMoney.subtract(moneyToGet)));
+            driversRepository.save(driver);
+            return "Вы успешно вывели " + moneyToGet + "₽ с баланса";
+        }
+        catch(Exception e){
+            return "Вы ввели что-то не так";
+        }
     }
 
     private boolean isItRusChar(char c){

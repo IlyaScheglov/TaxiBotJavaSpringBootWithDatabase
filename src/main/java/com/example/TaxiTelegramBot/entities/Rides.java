@@ -1,14 +1,14 @@
 package com.example.TaxiTelegramBot.entities;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.io.Serializable;
 
 @Entity
-@Getter
-@Setter
+@Data
 @Table(name = "rides")
 public class Rides implements Serializable {
 

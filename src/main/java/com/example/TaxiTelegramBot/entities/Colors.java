@@ -1,6 +1,7 @@
 package com.example.TaxiTelegramBot.entities;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,8 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Getter
-@Setter
+@Data
 @Table(name = "colors")
 public class Colors implements Serializable {
 
