@@ -23,6 +23,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @RequiredArgsConstructor
@@ -30,11 +31,11 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private final PhotoPathConfig photoPathConfig;
 
-    private Map<Long, TypeOfSpecialMessage> specialMessagesMap = new HashMap<>();
+    private ConcurrentHashMap<Long, TypeOfSpecialMessage> specialMessagesMap = new ConcurrentHashMap<>();
 
-    private Map<Long, Users> newUsersMap = new HashMap<>();
+    private ConcurrentHashMap<Long, Users> newUsersMap = new ConcurrentHashMap<>();
 
-    private Map<Long, Drivers> newDriversMap = new HashMap<>();
+    private ConcurrentHashMap<Long, Drivers> newDriversMap = new ConcurrentHashMap<>();
 
     private final UsersService usersService;
 
@@ -152,56 +153,77 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void specialMessagesHandler(Message message, TypeOfSpecialMessage type){
-        if(type.equals(TypeOfSpecialMessage.USER_REGISTER_LOGIN)){
-            userRegisterLogin(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.USER_REGISTER_PASSWORD)){
-            userRegisterPassword(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.USER_REGISTER_FIO)){
-            userRegisterFIO(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.USER_REGISTER_CITY)){
-            userRegisterCity(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.USER_AUTORIZE)){
-            userAutorize(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_LOGIN)){
-            driverRegistrationLogin(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_PASSWORD)){
-            driverRegistrationPassword(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_FIO)){
-            driverRegistrationFio(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_CITY)){
-            driverRegistrationCity(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_NUMBER)){
-            driverRegistrationAutoNumber(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_DRIVE_EXPIRIENCE)){
-            driverRegistrationDriveExpirience(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_CLASS)){
-            driverRegistrationAutoClass(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_MARK)){
-            driverRegistrationAutoMark(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_COLOR)){
-            driverRegistrationAutoColor(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_REGISTER_PHOTO)){
-            driverRegistrationPhoto(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_AUTORIZE)){
-            driverAutorize(message);
-        }
-        else if(type.equals(TypeOfSpecialMessage.DRIVER_GET_MONEY)){
-            driverHowMuchMoneyToGet(message);
+        switch (type){
+            case TypeOfSpecialMessage.USER_REGISTER_LOGIN:
+                userRegisterLogin(message);
+                break;
+
+            case TypeOfSpecialMessage.USER_REGISTER_PASSWORD:
+                userRegisterPassword(message);
+                break;
+
+            case TypeOfSpecialMessage.USER_REGISTER_FIO:
+                userRegisterFIO(message);
+                break;
+
+            case TypeOfSpecialMessage.USER_REGISTER_CITY:
+                userRegisterCity(message);
+                break;
+
+            case TypeOfSpecialMessage.USER_AUTORIZE:
+                userAutorize(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_REGISTER_LOGIN:
+                driverRegistrationLogin(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_REGISTER_PASSWORD:
+                driverRegistrationPassword(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_REGISTER_FIO:
+                driverRegistrationFio(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_REGISTER_CITY:
+                driverRegistrationCity(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_NUMBER:
+                driverRegistrationAutoNumber(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_REGISTER_DRIVE_EXPIRIENCE:
+                driverRegistrationDriveExpirience(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_CLASS:
+                driverRegistrationAutoClass(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_MARK:
+                driverRegistrationAutoMark(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_COLOR:
+                driverRegistrationAutoColor(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_REGISTER_PHOTO:
+                driverRegistrationPhoto(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_AUTORIZE:
+                driverAutorize(message);
+                break;
+
+            case TypeOfSpecialMessage.DRIVER_GET_MONEY:
+                driverHowMuchMoneyToGet(message);
+                break;
+
+            default:
+                break;
         }
     }
 
@@ -352,8 +374,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         Users user = newUsersMap.get(message.getChatId());
         user.setCity(realCity);
         user.setChatId(message.getChatId());
-        Users newUser = usersService.registerNewUser(user);
-        cityService.addUserToCity(newUser, user.getCity());
+        usersService.registerNewUser(user);
         newUsersMap.remove(message.getChatId());
         try{
             execute(messageToSend);
@@ -519,7 +540,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         Drivers driver = newDriversMap.get(message.getChatId());
         driver.setCity(city);
         newDriversMap.put(message.getChatId(), driver);
-        cityService.addDriverToCity(driver, city);
         try{
             execute(messageToSend);
         }
@@ -879,5 +899,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         inlineKeyboardMarkup.setKeyboard(rowsInlineButtons);
         return inlineKeyboardMarkup;
     }
+
 
 }

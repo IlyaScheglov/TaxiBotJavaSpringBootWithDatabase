@@ -28,6 +28,15 @@ public class DriversService {
 
     private final DriversRepository driversRepository;
 
+    private final CityService cityService;
+
+    private final AutoClassesService autoClassesService;
+
+    private final ColorsService colorsService;
+
+    private final MarksService marksService;
+
+
     public boolean checkDriverLoginOrNot(long chatId){
         Drivers driver = getDriverByChatId(chatId);
         return driver != null;
@@ -121,6 +130,10 @@ public class DriversService {
         driver.setMoney("0.00");
         driver.setActive(false);
         driversRepository.save(driver);
+        cityService.addDriverToCity(driver, driver.getCity());
+        autoClassesService.addDriverToClasses(driver, driver.getAutoClass());
+        colorsService.addDriversToColor(driver, driver.getColor());
+        marksService.addDriverToMark(driver, driver.getMark());
     }
 
     public String loginDriver(String loginAndPassword, long chatId){

@@ -17,6 +17,8 @@ public class UsersService {
 
     private final UsersRepository usersRepository;
 
+    private final CityService cityService;
+
 
     public boolean checkUserLoginOrNot(long chatId){
         Users user = findUserByChatId(chatId);
@@ -67,10 +69,10 @@ public class UsersService {
         return "Вы успешно пополнили баланс";
     }
 
-    public Users registerNewUser(Users user){
+    public void registerNewUser(Users user){
         user.setMoney("0.00");
         usersRepository.save(user);
-        return user;
+        cityService.addUserToCity(user, user.getCity());
     }
 
     public boolean checkCanWeRegisterThisUser(String login){

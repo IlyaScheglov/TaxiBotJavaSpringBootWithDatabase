@@ -22,6 +22,6 @@ public class Statuses implements Serializable {
     @Column(name = "title")
     private String title;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "status")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "status")
     private List<Rides> rides = new ArrayList<>();
 }

@@ -28,9 +28,9 @@ public class AutoClasses implements Serializable {
     @Column(name = "standard_cost")
     private String standardCost;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "autoClass")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "autoClass")
     private List<Rides> rides = new ArrayList<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "autoClass")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "autoClass")
     private List<Drivers> drivers = new ArrayList<>();
 }

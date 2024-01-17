@@ -47,7 +47,7 @@ public class Drivers implements Serializable {
     @Column(name = "photo_path")
     private String photoPath;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "driver")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "driver")
     private List<Rides> rides = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -66,6 +66,6 @@ public class Drivers implements Serializable {
     @JoinColumn(name = "auto_color_id", referencedColumnName = "id")
     private Colors color;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "driver")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "driver")
     private List<Reviews> reviews = new ArrayList<>();
 }

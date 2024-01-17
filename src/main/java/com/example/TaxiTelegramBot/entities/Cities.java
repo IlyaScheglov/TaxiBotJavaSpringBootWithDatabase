@@ -22,12 +22,12 @@ public class Cities implements Serializable {
     @Column(name = "title")
     private String title;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "city")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "city")
     private List<Rides> rides = new ArrayList<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "city")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "city")
     private List<Users> users = new ArrayList<>();
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "city")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "city")
     private List<Drivers> drivers = new ArrayList<>();
 }

@@ -1,11 +1,15 @@
 package com.example.TaxiTelegramBot.services;
 
 import com.example.TaxiTelegramBot.entities.Colors;
+import com.example.TaxiTelegramBot.entities.Drivers;
 import com.example.TaxiTelegramBot.repos.ColorsRepository;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class ColorsService {
 
@@ -20,5 +24,10 @@ public class ColorsService {
             return newColor;
         }
         return color;
+    }
+
+    public void addDriversToColor(Drivers driver, Colors color){
+        color.getDrivers().add(driver);
+        colorsRepository.save(color);
     }
 }

@@ -1,15 +1,19 @@
 package com.example.TaxiTelegramBot.services;
 
 import com.example.TaxiTelegramBot.entities.AutoClasses;
+import com.example.TaxiTelegramBot.entities.Drivers;
 import com.example.TaxiTelegramBot.repos.AutoClassesRepository;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class AutoClassesService {
 
@@ -28,5 +32,10 @@ public class AutoClassesService {
 
     public AutoClasses getAutoClassByTitle(String title){
         return autoClassesRepository.findByTitle(title);
+    }
+
+    public void addDriverToClasses(Drivers driver, AutoClasses autoClass){
+        autoClass.getDrivers().add(driver);
+        autoClassesRepository.save(autoClass);
     }
 }

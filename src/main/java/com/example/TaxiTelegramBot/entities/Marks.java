@@ -22,6 +22,6 @@ public class Marks implements Serializable {
     @Column(name = "title")
     private String title;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "mark")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "mark")
     private List<Drivers> drivers = new ArrayList<>();
 }

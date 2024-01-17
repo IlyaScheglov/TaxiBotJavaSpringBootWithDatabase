@@ -22,6 +22,6 @@ public class Colors implements Serializable {
     @Column(name = "title")
     private String title;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "color")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "color")
     private List<Drivers> drivers = new ArrayList<>();
 }

@@ -5,13 +5,16 @@ import com.example.TaxiTelegramBot.entities.Drivers;
 import com.example.TaxiTelegramBot.entities.Users;
 import com.example.TaxiTelegramBot.repos.CityRepository;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CityService {
 
     private final CityRepository cityRepository;
@@ -29,17 +32,15 @@ public class CityService {
         }
     }
 
+
     public void addUserToCity(Users user, Cities city){
-        List<Users> users = city.getUsers();
-        users.add(user);
-        city.setUsers(users);
+        city.getUsers().add(user);
         cityRepository.save(city);
     }
 
     public void addDriverToCity(Drivers driver, Cities city){
-        List<Drivers> drivers = new ArrayList<>();
-        drivers.add(driver);
-        city.setDrivers(drivers);
+        city.getDrivers().add(driver);
         cityRepository.save(city);
     }
+
 }
