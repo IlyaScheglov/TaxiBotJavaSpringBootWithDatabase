@@ -26,7 +26,7 @@ public class AutoClassesService {
         return result;
     }
 
-    private List<AutoClasses> findAll(){
+    public List<AutoClasses> findAll(){
         return autoClassesRepository.findAll();
     }
 
@@ -35,7 +35,9 @@ public class AutoClassesService {
     }
 
     public void addDriverToClasses(Drivers driver, AutoClasses autoClass){
-        autoClass.getDrivers().add(driver);
-        autoClassesRepository.save(autoClass);
+        AutoClasses autoClassWithDrivers = autoClassesRepository
+                .findAutoClassWithDriversById(autoClass.getId());
+        autoClassWithDrivers.getDrivers().add(driver);
+        autoClassesRepository.save(autoClassWithDrivers);
     }
 }

@@ -34,13 +34,17 @@ public class CityService {
 
 
     public void addUserToCity(Users user, Cities city){
-        city.getUsers().add(user);
-        cityRepository.save(city);
+        Cities cityWithUsers = cityRepository.findCityWithUsersById(city.getId());
+        cityWithUsers.getUsers().add(user);
+        cityRepository.save(cityWithUsers);
     }
 
     public void addDriverToCity(Drivers driver, Cities city){
-        city.getDrivers().add(driver);
-        cityRepository.save(city);
+        Cities cityWithDrivers = cityRepository.findCityWithDriversById(driver.getId());
+        cityWithDrivers.getDrivers().add(driver);
+        cityRepository.save(cityWithDrivers);
     }
+
+
 
 }

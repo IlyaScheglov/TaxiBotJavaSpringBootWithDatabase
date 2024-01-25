@@ -27,7 +27,8 @@ public class MarksService {
     }
 
     public void addDriverToMark(Drivers driver, Marks mark){
-        mark.getDrivers().add(driver);
-        marksRepository.save(mark);
+        Marks markWithDrivers = marksRepository.findMarkWithDriversById(mark.getId());
+        markWithDrivers.getDrivers().add(driver);
+        marksRepository.save(markWithDrivers);
     }
 }

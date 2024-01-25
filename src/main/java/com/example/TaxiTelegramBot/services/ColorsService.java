@@ -27,7 +27,8 @@ public class ColorsService {
     }
 
     public void addDriversToColor(Drivers driver, Colors color){
-        color.getDrivers().add(driver);
-        colorsRepository.save(color);
+        Colors colorWithDrivers = colorsRepository.findColorWithDriversById(color.getId());
+        colorWithDrivers.getDrivers().add(driver);
+        colorsRepository.save(colorWithDrivers);
     }
 }

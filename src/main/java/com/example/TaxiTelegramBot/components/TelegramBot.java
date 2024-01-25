@@ -146,6 +146,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     break;
 
                 default:
+                    driverRegistrationAutoClass(callback, chatId, messageId);
                     break;
 
             }
@@ -196,10 +197,6 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             case TypeOfSpecialMessage.DRIVER_REGISTER_DRIVE_EXPIRIENCE:
                 driverRegistrationDriveExpirience(message);
-                break;
-
-            case TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_CLASS:
-                driverRegistrationAutoClass(message);
                 break;
 
             case TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_MARK:
@@ -597,26 +594,30 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void driverRegistrationAutoClass(Message message){
-        List<String> allClasses = autoClassesService.findAllClassesTitle();
-        SendMessage messageToSend = new SendMessage();
-        messageToSend.setChatId(message.getChatId());
-        String classChosen = message.getText();
-        if(!allClasses.contains(classChosen)){
-            messageToSend.setText("Выберите класс автомобиля из списка");
-            messageToSend.setReplyMarkup(makeMarkupForAutoClass());
+    private void driverRegistrationAutoClass(String callback, long chatId, long messagId){
+        EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setChatId(chatId);
+        editMessageText.setMessageId((int) messagId);
+        if(!specialMessagesMap.get(chatId)
+                .equals(TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_CLASS)){
+            editMessageText.setText("Произошла какая-то ошибка");
         }
         else{
-            messageToSend.setText("Введите марку своего автомобиля");
-            specialMessagesMap.put(message.getChatId(),
-                    TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_MARK);
-            Drivers driver = newDriversMap.get(message.getChatId());
-            driver.setAutoClass(autoClassesService.getAutoClassByTitle(classChosen));
-            newDriversMap.put(message.getChatId(), driver);
+            AutoClasses autoClass = autoClassesService.getAutoClassByTitle(callback);
+            if(autoClass == null){
+                editMessageText.setText("Произошла какая-то ошибка");
+            }
+            else{
+                Drivers driver = newDriversMap.get(chatId);
+                driver.setAutoClass(autoClass);
+                newDriversMap.put(chatId, driver);
+                specialMessagesMap.put(chatId, TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_MARK);
+                editMessageText.setText("Введите марку своего автомобиля");
+            }
         }
 
         try{
-            execute(messageToSend);
+            execute(editMessageText);
         }
         catch (TelegramApiException e){
             throw new RuntimeException(e);
@@ -697,15 +698,23 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private ReplyKeyboardMarkup makeMarkupForAutoClass(){
-        List<String> allClasses = autoClassesService.findAllClassesTitle();
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow keyboardRow = new KeyboardRow();
-        allClasses.forEach(ac -> keyboardRow.add(ac));
-        keyboardRows.add(keyboardRow);
-        replyKeyboardMarkup.setKeyboard(keyboardRows);
-        return replyKeyboardMarkup;
+
+
+    private InlineKeyboardMarkup makeMarkupForAutoClass(){
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+        List<AutoClasses> autoClasses = autoClassesService.findAll();
+
+        autoClasses.forEach(ac -> {
+            List<InlineKeyboardButton> rowButtons = new ArrayList<>();
+            InlineKeyboardButton button = new InlineKeyboardButton(ac.getTitle());
+            button.setCallbackData(ac.getTitle());
+            rowButtons.add(button);
+            buttons.add(rowButtons);
+        });
+
+        inlineKeyboardMarkup.setKeyboard(buttons);
+        return inlineKeyboardMarkup;
     }
 
     private void startLoginAsDriver(Message message){
