@@ -33,7 +33,7 @@ public class Rides implements Serializable {
     private String cost;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user-id", referencedColumnName = "id")
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
     private Users user;
 
     @ManyToOne(fetch = FetchType.EAGER)

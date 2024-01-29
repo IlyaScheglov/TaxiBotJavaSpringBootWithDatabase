@@ -94,7 +94,7 @@ public class UsersService {
         return Argon2Factory.create();
     }
 
-    private Users findUserByChatId(long chatId){
+    public Users findUserByChatId(long chatId){
         return usersRepository.findByChatId(chatId);
     }
 }

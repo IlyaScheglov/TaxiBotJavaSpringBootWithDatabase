@@ -6,6 +6,8 @@ import com.example.TaxiTelegramBot.entities.*;
 import com.example.TaxiTelegramBot.enums.TypeOfSpecialMessage;
 import com.example.TaxiTelegramBot.services.*;
 import lombok.RequiredArgsConstructor;
+import net.sf.geographiclib.Geodesic;
+import net.sf.geographiclib.GeodesicData;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -36,6 +38,8 @@ public class TelegramBot extends TelegramLongPollingBot {
     private ConcurrentHashMap<Long, Users> newUsersMap = new ConcurrentHashMap<>();
 
     private ConcurrentHashMap<Long, Drivers> newDriversMap = new ConcurrentHashMap<>();
+
+    private ConcurrentHashMap<Long, Rides> newRide = new ConcurrentHashMap<>();
 
     private final UsersService usersService;
 
@@ -121,6 +125,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                             driverMoney(message);
                             break;
 
+                        case "/order-taxi":
+                            orderTaxi(message);
+                            break;
+
                         default:
                             defaultMessage(message);
                             break;
@@ -146,7 +154,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     break;
 
                 default:
-                    driverRegistrationAutoClass(callback, chatId, messageId);
+                    autoClassAssignment(callback, chatId, messageId);
                     break;
 
             }
@@ -155,68 +163,76 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void specialMessagesHandler(Message message, TypeOfSpecialMessage type){
         switch (type){
-            case TypeOfSpecialMessage.USER_REGISTER_LOGIN:
+            case USER_REGISTER_LOGIN:
                 userRegisterLogin(message);
                 break;
 
-            case TypeOfSpecialMessage.USER_REGISTER_PASSWORD:
+            case USER_REGISTER_PASSWORD:
                 userRegisterPassword(message);
                 break;
 
-            case TypeOfSpecialMessage.USER_REGISTER_FIO:
+            case USER_REGISTER_FIO:
                 userRegisterFIO(message);
                 break;
 
-            case TypeOfSpecialMessage.USER_REGISTER_CITY:
+            case USER_REGISTER_CITY:
                 userRegisterCity(message);
                 break;
 
-            case TypeOfSpecialMessage.USER_AUTORIZE:
+            case USER_AUTORIZE:
                 userAutorize(message);
                 break;
 
-            case TypeOfSpecialMessage.DRIVER_REGISTER_LOGIN:
+            case DRIVER_REGISTER_LOGIN:
                 driverRegistrationLogin(message);
                 break;
 
-            case TypeOfSpecialMessage.DRIVER_REGISTER_PASSWORD:
+            case DRIVER_REGISTER_PASSWORD:
                 driverRegistrationPassword(message);
                 break;
 
-            case TypeOfSpecialMessage.DRIVER_REGISTER_FIO:
+            case DRIVER_REGISTER_FIO:
                 driverRegistrationFio(message);
                 break;
 
-            case TypeOfSpecialMessage.DRIVER_REGISTER_CITY:
+            case DRIVER_REGISTER_CITY:
                 driverRegistrationCity(message);
                 break;
 
-            case TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_NUMBER:
+            case DRIVER_REGISTER_AUTO_NUMBER:
                 driverRegistrationAutoNumber(message);
                 break;
 
-            case TypeOfSpecialMessage.DRIVER_REGISTER_DRIVE_EXPIRIENCE:
+            case DRIVER_REGISTER_DRIVE_EXPIRIENCE:
                 driverRegistrationDriveExpirience(message);
                 break;
 
-            case TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_MARK:
+            case DRIVER_REGISTER_AUTO_MARK:
                 driverRegistrationAutoMark(message);
                 break;
 
-            case TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_COLOR:
+            case DRIVER_REGISTER_AUTO_COLOR:
                 driverRegistrationAutoColor(message);
                 break;
 
-            case TypeOfSpecialMessage.DRIVER_REGISTER_PHOTO:
+            case DRIVER_REGISTER_PHOTO:
                 driverRegistrationPhoto(message);
                 break;
 
-            case TypeOfSpecialMessage.DRIVER_AUTORIZE:
+            case DRIVER_AUTORIZE:
                 driverAutorize(message);
                 break;
 
-            case TypeOfSpecialMessage.DRIVER_GET_MONEY:
+            case DRIVER_GET_MONEY:
                 driverHowMuchMoneyToGet(message);
+                break;
+
+            case USER_ORDER_TAXI_FIRST_ADDRESS:
+                typeFirstAddress(message);
+                break;
+
+            case USER_ORDER_TAXI_COST:
+                typeSecondAddress(message);
                 break;
 
             default:
@@ -578,7 +594,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
         else{
             messageToSend.setText("Выберите класс автомобиля");
-            messageToSend.setReplyMarkup(makeMarkupForAutoClass());
+            messageToSend.setReplyMarkup(makeMarkupForAutoClassDriverRegistration());
             specialMessagesMap.put(message.getChatId(),
                     TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_CLASS);
             Drivers driver = newDriversMap.get(message.getChatId());
@@ -594,18 +610,20 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void driverRegistrationAutoClass(String callback, long chatId, long messagId){
+    private void driverRegistrationAutoClass(String callback, long chatId, long messageId){
         EditMessageText editMessageText = new EditMessageText();
         editMessageText.setChatId(chatId);
-        editMessageText.setMessageId((int) messagId);
+        editMessageText.setMessageId((int) messageId);
         if(!specialMessagesMap.get(chatId)
                 .equals(TypeOfSpecialMessage.DRIVER_REGISTER_AUTO_CLASS)){
             editMessageText.setText("Произошла какая-то ошибка");
+            specialMessagesMap.remove(chatId);
         }
         else{
             AutoClasses autoClass = autoClassesService.getAutoClassByTitle(callback);
             if(autoClass == null){
                 editMessageText.setText("Произошла какая-то ошибка");
+                specialMessagesMap.remove(chatId);
             }
             else{
                 Drivers driver = newDriversMap.get(chatId);
@@ -700,7 +718,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
 
 
-    private InlineKeyboardMarkup makeMarkupForAutoClass(){
+    private InlineKeyboardMarkup makeMarkupForAutoClassDriverRegistration(){
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
         List<AutoClasses> autoClasses = autoClassesService.findAll();
@@ -708,7 +726,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         autoClasses.forEach(ac -> {
             List<InlineKeyboardButton> rowButtons = new ArrayList<>();
             InlineKeyboardButton button = new InlineKeyboardButton(ac.getTitle());
-            button.setCallbackData(ac.getTitle());
+            button.setCallbackData("DRIVER" + ac.getTitle());
             rowButtons.add(button);
             buttons.add(rowButtons);
         });
@@ -907,6 +925,153 @@ public class TelegramBot extends TelegramLongPollingBot {
         rowsInlineButtons.add(buttonsInRow);
         inlineKeyboardMarkup.setKeyboard(rowsInlineButtons);
         return inlineKeyboardMarkup;
+    }
+
+    private void orderTaxi(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        if(!usersService.checkUserLoginOrNot(message.getChatId())){
+            messageToSend.setText("Вы еще не авторизовались как пользователь");
+        }
+        else{
+            specialMessagesMap.put(message.getChatId(), TypeOfSpecialMessage.USER_ORDER_TAXI_FIRST_ADDRESS);
+            newRide.put(message.getChatId(), new Rides());
+            messageToSend.setText("Введите адрес, где вы находитесь");
+        }
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void typeFirstAddress(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        Rides ride = newRide.get(message.getChatId());
+        Users user = usersService.findUserByChatId(message.getChatId());
+        String firstAddress = user.getCity().getTitle() + ", " + message.getText();
+        ride.setPlaceStart(firstAddress);
+        newRide.put(message.getChatId(), ride);
+        specialMessagesMap.put(message.getChatId(), TypeOfSpecialMessage.USER_ORDER_TAXI_SECOND_ADDRESS);
+        messageToSend.setText("Введите адрес, куда хотите приехать");
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void typeSecondAddress(Message message){
+        SendMessage messageToSend = new SendMessage();
+        messageToSend.setChatId(message.getChatId());
+        Rides ride = newRide.get(message.getChatId());
+        Users user = usersService.findUserByChatId(message.getChatId());
+        String secondAddress = user.getCity().getTitle() + ", " + message.getText();
+        ride.setPlaceStart(secondAddress);
+        newRide.put(message.getChatId(), ride);
+        specialMessagesMap.put(message.getChatId(), TypeOfSpecialMessage.USER_ORDER_TAXI_CLASS);
+        messageToSend.setReplyMarkup(makeMarkupforAutoClassesUserOrder());
+        messageToSend.setText("Выберите класс автомобиля");
+
+        try{
+            execute(messageToSend);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private InlineKeyboardMarkup makeMarkupforAutoClassesUserOrder(){
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+        List<AutoClasses> autoClasses = autoClassesService.findAll();
+
+        autoClasses.forEach(ac -> {
+            List<InlineKeyboardButton> rowButtons = new ArrayList<>();
+            InlineKeyboardButton button = new InlineKeyboardButton(ac.getTitle());
+            button.setCallbackData("USER" + ac.getTitle());
+            rowButtons.add(button);
+            buttons.add(rowButtons);
+        });
+
+        inlineKeyboardMarkup.setKeyboard(buttons);
+        return inlineKeyboardMarkup;
+    }
+
+    private void autoClassAssignment(String callback, long chatId, long messageId){
+        if(callback.contains("DRIVER")){
+            driverRegistrationAutoClass(callback.replaceAll("DRIVER", ""), chatId, messageId);
+        }
+        else if(callback.contains("USER")){
+            chooseUserOrderAutoClass(callback.replaceAll("USER", ""), chatId, messageId);
+        }
+    }
+
+    private void chooseUserOrderAutoClass(String callback, long chatId, long messageId){
+        EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setChatId(chatId);
+        editMessageText.setMessageId((int) messageId);
+        if(!specialMessagesMap.get(chatId)
+                .equals(TypeOfSpecialMessage.USER_ORDER_TAXI_CLASS)){
+            editMessageText.setText("Произошла какая-то ошибка");
+            specialMessagesMap.remove(chatId);
+        }
+        else{
+            AutoClasses autoClass = autoClassesService.getAutoClassByTitle(callback);
+            if(autoClass == null){
+                editMessageText.setText("Произошла какая-то ошибка");
+                specialMessagesMap.remove(chatId);
+            }
+            else{
+                Rides ride = newRide.get(chatId);
+                ride.setAutoClass(autoClass);
+                ride.setCost(calculateCost(ride.getPlaceStart(), ride.getPlaceFinish(), ride.getAutoClass()));
+                editMessageText.setText("Ваша поездка будет стоить " + ride.getCost() + "₽");
+                editMessageText.setReplyMarkup(makeMarkupForOrderYesOrNo());
+            }
+        }
+
+        try{
+            execute(editMessageText);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private InlineKeyboardMarkup makeMarkupForOrderYesOrNo(){
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+
+        List<InlineKeyboardButton> rowButton1 = new ArrayList<>();
+        InlineKeyboardButton button1 = new InlineKeyboardButton("Заказать");
+        button1.setCallbackData("ORDER_YES");
+        rowButton1.add(button1);
+        buttons.add(rowButton1);
+
+        List<InlineKeyboardButton> rowButton2 = new ArrayList<>();
+        InlineKeyboardButton button2 = new InlineKeyboardButton("Отменить");
+        button2.setCallbackData("ORDER_NO");
+        rowButton2.add(button2);
+        buttons.add(rowButton2);
+
+        inlineKeyboardMarkup.setKeyboard(buttons);
+        return inlineKeyboardMarkup;
+    }
+
+    private String calculateCost(String firstAddress, String secondAddress, AutoClasses autoClass){
+        return "Пока не реализованно";
+    }
+
+    private int geographyLength(double lat1, double lon1, double lat2, double lon2){
+        GeodesicData geodesicData = Geodesic.WGS84.Inverse(lat1, lon1, lat2, lon2);
+        double lengthInMetres = geodesicData.s12;
+        return (int) lengthInMetres / 1000;
     }
 
 
