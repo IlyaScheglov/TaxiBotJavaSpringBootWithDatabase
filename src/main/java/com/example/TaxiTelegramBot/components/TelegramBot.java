@@ -24,6 +24,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -151,6 +152,14 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                 case "GET_MONEY_DRIVER":
                     getDriverMoney(chatId, messageId);
+                    break;
+
+                case "ORDER_YES":
+                    findDriver(chatId, messageId);
+                    break;
+
+                case "ORDER_NO":
+                    cancelOrder(chatId, messageId);
                     break;
 
                 default:
@@ -1065,7 +1074,14 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private String calculateCost(String firstAddress, String secondAddress, AutoClasses autoClass){
-        return "Пока не реализованно";
+        //в Дальнейшем расчет будет по адресу
+        double lat1 = 55.00, lon1 = 54.00, lat2 = 67.00, lon2 = 68.00;
+        int lengthInKilometres = geographyLength(lat1, lon1, lat2, lon2);
+        BigDecimal costForkm = new BigDecimal(autoClass.getCostForKm());
+        BigDecimal standardCost = new BigDecimal(autoClass.getStandardCost());
+
+        BigDecimal result = standardCost.add(costForkm.multiply(new BigDecimal(lengthInKilometres)));
+        return result.toString();
     }
 
     private int geographyLength(double lat1, double lon1, double lat2, double lon2){
@@ -1074,5 +1090,34 @@ public class TelegramBot extends TelegramLongPollingBot {
         return (int) lengthInMetres / 1000;
     }
 
+    private void findDriver(long chatId, long messageId){
+        EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setChatId(chatId);
+        editMessageText.setMessageId((int) messageId);
+        editMessageText.setText("Начинаем поиск таксистов");
+
+
+        try{
+            execute(editMessageText);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void cancelOrder(long chatId, long messageId){
+        EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setChatId(chatId);
+        editMessageText.setMessageId((int) messageId);
+        editMessageText.setText("Введите сколько денег вы хотите вывести");
+        specialMessagesMap.put(chatId, TypeOfSpecialMessage.DRIVER_GET_MONEY);
+
+        try{
+            execute(editMessageText);
+        }
+        catch (TelegramApiException e){
+            throw new RuntimeException(e);
+        }
+    }
 
 }
